@@ -1,4 +1,4 @@
-.PHONY: all test tidy build run format clean coverage coverage-rich lint fix
+.PHONY: all test tidy build run format clean
 
 .PHONY: all
 all: tidy test build
@@ -7,16 +7,18 @@ all: tidy test build
 test:
 	go test -failfast ./...
 
+# Цель для запуска тестов с покрытием и генерации простого HTML-отчёта
 .PHONY: coverage
 coverage:
-	if not exist coverage mkdir coverage
+	mkdir -p coverage/
 	go test -coverprofile=coverage/coverage.out -covermode=atomic ./...
 	go tool cover -html=coverage/coverage.out -o coverage/report.html
-	@echo Отчет готов: coverage/report.html
+	sed -i 's/black/whitesmoke/g' coverage/report.html
 
+# Цель для запуска тестов с покрытием и генерации HTML-отчёта через ReportGenerator
 .PHONY: coverage-rich
 coverage-rich:
-	if not exist coverage mkdir coverage
+	mkdir -p coverage/
 	go test -coverprofile=coverage/coverage.out -covermode=atomic ./...
 	go tool cover -html=coverage/coverage.out -o coverage/coverage.html
 	go tool gocover-cobertura -by-files < coverage/coverage.out > coverage/cobertura.xml
@@ -24,18 +26,18 @@ coverage-rich:
 
 .PHONY: tidy
 tidy:
-	go mod tidy
+	go mod tidy && \
+	go mod vendor
 
 .PHONY: build
 build:
-	go build -o bin/compiler.exe cmd/main.go
+	go build -o bin/compiler cmd/main.go
 
 .PHONY: clean
 clean:
 	go clean -testcache
-	if exist bin\compiler.exe del /Q bin\compiler.exe
-	if exist tests-coverage.out del /Q tests-coverage.out
-	if exist tests-coverage.html del /Q tests-coverage.html
+	rm -f bin/compiler
+	rm -f tests-coverage.out tests-coverage.html
 
 .PHONY: lint
 lint:
@@ -49,4 +51,4 @@ fix:
 
 .PHONY: format
 format:
-	gofmt -w .
+	$(shell go env GOPATH)/bin/golangci-lint fmt
